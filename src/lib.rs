@@ -1,4 +1,4 @@
-//! `String` implementation optimized for small sized strings `core::mem::size_of::<usize>()`.
+//! `String` implementation optimized for small sized strings(at most length `mem::size_of::<usize>() * 2 - 2`)
 //!
 //! ## Features
 //!
