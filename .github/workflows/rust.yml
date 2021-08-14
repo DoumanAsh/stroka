@@ -1,0 +1,51 @@
+name: Rust
+
+on:
+  push:
+    paths:
+      - '.github/workflows/rust.yml'
+      - 'src/**.rs'
+      - '**.toml'
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/rust.yml'
+      - 'src/**.rs'
+      - '**.toml'
+    branches:
+      - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Install Rust Unix
+      if: runner.os != 'Windows'
+      run: |
+        if rustup --version >/dev/null 2>&1; then
+            rustup update
+        else
+             curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain stable
+             echo ::add-path::$HOME/.cargo/bin
+        fi
+
+    - name: Install Valgrind
+      run: |
+        sudo apt-get install -y valgrind
+
+    - name: Rust version
+      run: |
+        cargo --version
+        rustc --version
+
+    - name: Test
+      run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind" cargo test
+
+    - name: Test (Optimized)
+      run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind" cargo test --release

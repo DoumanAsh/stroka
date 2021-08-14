@@ -1,0 +1,23 @@
+[package]
+name = "stroka"
+version = "1.0.0"
+authors = ["Douman <douman@gmx.se>"]
+edition = "2018"
+description = "Small String optimization"
+license = "BSL-1.0"
+repository = "https://github.com/DoumanAsh/stroka"
+keywords = ["string", "str", ""]
+readme = "README.md"
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+    "README.md"
+]
+
+[dependencies.minivec]
+version = "0.3"
+default-features = false
+
+[dependencies.str-buf]
+version = "2.0.2"
+default-features = false
