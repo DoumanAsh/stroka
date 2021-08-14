@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/rust.yml'
-      - 'src/**.rs'
+      - '**.rs'
       - '**.toml'
     branches:
       - master
@@ -12,7 +12,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - '.github/workflows/rust.yml'
-      - 'src/**.rs'
+      - '**.rs'
       - '**.toml'
     branches:
       - '**'
