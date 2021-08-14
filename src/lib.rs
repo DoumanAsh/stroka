@@ -1,10 +1,16 @@
 //! `String` implementation optimized for small sized strings `core::mem::size_of::<usize>()`.
+//!
+//! ## Features
+//!
+//! - `serde` - Enables `Serialize` and `Deserialize` implementations.
 #![no_std]
 #![warn(missing_docs)]
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::style))]
 
 extern crate alloc;
 
+#[cfg(feature = "serde")]
+mod serde;
 mod utils;
 
 use core::{ptr, mem, fmt, hash};
