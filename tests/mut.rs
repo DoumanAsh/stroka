@@ -127,7 +127,41 @@ pub fn should_insert_at_any_valid_position() {
     assert_eq!(stroka, "11単語8単語81単語8");
     stroka.insert_str(stroka.len() - 1, TEXT);
     assert_eq!(stroka, "11単語8単語81単語1単語88");
+    stroka.insert(2, '-');
+    assert_eq!(stroka, "11-単語8単語81単語1単語88");
+    stroka.insert(0, '-');
+    assert_eq!(stroka, "-11-単語8単語81単語1単語88");
+    stroka.insert(stroka.len(), '-');
+    assert_eq!(stroka, "-11-単語8単語81単語1単語88-");
+    stroka.insert(stroka.len() - 2, '+');
+    assert_eq!(stroka, "-11-単語8単語81単語1単語8+8-");
 }
+
+#[test]
+pub fn should_retain_within_sso() {
+    const TEXT: &str = "1--単語8-";
+    let mut stroka = stroka::String::new_sso(TEXT);
+    assert!(!stroka.is_heap());
+
+    stroka.retain(|ch| ch.len_utf8() == 1);
+    assert_eq!(stroka, "1--8-");
+    stroka.retain(|ch| ch != '-');
+    assert_eq!(stroka, "18");
+}
+
+#[test]
+pub fn should_retain_within_heap() {
+    const TEXT: &str = "-1++1-単語8単語81単語1単語8+8-++";
+    let mut stroka = stroka::String::new_str(TEXT);
+    assert!(stroka.is_heap());
+
+    assert_eq!(stroka.len(), TEXT.len());
+    stroka.retain(|ch| ch.len_utf8() == 1);
+    assert_eq!(stroka, "-1++1-88118+8-++");
+    stroka.retain(|ch| ch != '+');
+    assert_eq!(stroka, "-11-881188-");
+}
+
 
 #[test]
 #[should_panic]

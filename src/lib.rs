@@ -11,6 +11,7 @@
 //! - `String::from_utf8_unchecked` - due to `minivec` yet to be stable.
 //! - `String::into_bytes` - due to `minivec` yet to be stable.
 //! - Unstable functions of Vec - due to them being potentially changed.
+//! - `String::from_raw_parts` - cannot be implemented due to internal structure.
 #![no_std]
 #![warn(missing_docs)]
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::style))]
@@ -22,6 +23,7 @@ mod serde;
 #[cfg(feature = "std")]
 mod std;
 mod utils;
+use utils::MiniStr;
 
 use core::{ptr, mem, fmt, hash};
 
@@ -258,11 +260,12 @@ impl String {
     ///Panics if `new_len` does not lie on a `char` boundary.
     pub fn truncate(&mut self, new_len: usize) {
         match self {
-            Self::Heap(ref mut heap) => unsafe {
-                let text = core::str::from_utf8_unchecked_mut(heap.as_mut_slice());
-                assert!(text.is_char_boundary(new_len));
+            Self::Heap(ref mut heap) => {
+                assert!(heap.as_str().is_char_boundary(new_len));
                 //in case of index out of boundary we panic above
-                heap.set_len(new_len);
+                unsafe {
+                    heap.set_len(new_len);
+                }
             },
             Self::Sso(ref mut sso) => {
                 assert!(sso.is_char_boundary(new_len));
@@ -287,10 +290,11 @@ impl String {
     ///Removes the last character from the string and returns it, if there is any.
     pub fn pop(&mut self) -> Option<char> {
         let result = match self {
-            Self::Heap(ref mut heap) => unsafe {
-                let text = core::str::from_utf8_unchecked_mut(heap.as_mut_slice());
-                let result = text.chars().last()?;
-                heap.set_len(heap.len() - result.len_utf8());
+            Self::Heap(ref mut heap) => {
+                let result = heap.as_str().chars().last()?;
+                unsafe {
+                    heap.set_len(heap.len() - result.len_utf8());
+                }
                 result
             },
             Self::Sso(ref mut sso) => {
@@ -315,10 +319,8 @@ impl String {
     ///If `idx` is larger than or equal to the `String`'s length, or if it does not lie on a [`char`] boundary.
     pub fn remove(&mut self, idx: usize) -> char {
         let result = match self {
-            Self::Heap(ref mut heap) => unsafe {
-                let text = core::str::from_utf8_unchecked_mut(heap.as_mut_slice());
-
-                let ch = match text[idx..].chars().next() {
+            Self::Heap(ref mut heap) => {
+                let ch = match heap.as_str()[idx..].chars().next() {
                     Some(ch) => ch,
                     None => panic!("cannot remove a char from the end of a string")
                 };
@@ -326,8 +328,10 @@ impl String {
                 let next = idx + ch.len_utf8();
                 let len = heap.len();
 
-                ptr::copy(heap.as_ptr().add(next), heap.as_mut_ptr().add(idx), len - next);
-                heap.set_len(len - (next - idx));
+                unsafe {
+                    ptr::copy(heap.as_ptr().add(next), heap.as_mut_ptr().add(idx), len - next);
+                    heap.set_len(len - (next - idx));
+                }
                 ch
             },
             Self::Sso(ref mut sso) => {
@@ -347,6 +351,73 @@ impl String {
         };
 
         result
+    }
+
+    ///Retains only the characters specified by the predicate.
+    ///
+    ///In other words, remove all characters `c` such that `cb(c)` returns `false`.
+    ///This method operates in place, visiting each character exactly once in the
+    ///original order, and preserves the order of the retained characters.
+    pub fn retain<F: FnMut(char) -> bool>(&mut self, mut cb: F) {
+        #[inline(always)]
+        fn get_char_from_slice(slice: &[u8]) -> Option<char> {
+            unsafe { core::str::from_utf8_unchecked(slice) }.chars().next()
+        }
+
+        macro_rules! impl_retain {
+            ($storage:expr, $typ:ident) => {
+                struct LenSetter<'a> {
+                    storage: &'a mut $typ,
+                    idx: usize,
+                    del_bytes: usize,
+                }
+
+                //It is highly unlikely to be needed, but just in case
+                impl<'a> Drop for LenSetter<'a> {
+                    #[inline(always)]
+                    fn drop(&mut self) {
+                        let new_len = self.idx - self.del_bytes;
+                        debug_assert!(new_len <= self.storage.len());
+                        unsafe {
+                            self.storage.set_len(new_len as _);
+                        }
+
+                    }
+                }
+
+                let mut guard = LenSetter {
+                    storage: $storage,
+                    idx: 0,
+                    del_bytes: 0,
+                };
+                let len = guard.storage.len();
+
+                while let Some(ch) = guard.storage.as_slice().get(guard.idx..len).and_then(get_char_from_slice) {
+                    let ch_len = ch.len_utf8();
+
+                    if !cb(ch) {
+                        guard.del_bytes += ch_len;
+                    } else if guard.del_bytes > 0 {
+                        unsafe {
+                            ptr::copy(guard.storage.as_ptr().add(guard.idx),
+                                      guard.storage.as_mut_ptr().add(guard.idx - guard.del_bytes),
+                                      ch_len);
+                        }
+                    }
+
+                    guard.idx += ch_len;
+                }
+            }
+        }
+
+        match self {
+            Self::Heap(ref mut heap) => {
+                impl_retain!(heap, HeapStr);
+            },
+            Self::Sso(ref mut sso) => {
+                impl_retain!(sso, StrBuf);
+            }
+        }
     }
 
     #[inline(always)]
@@ -398,13 +469,14 @@ impl String {
     pub fn insert_str(&mut self, idx: usize, string: &str) {
         let string_len = string.len();
         match self {
-            Self::Heap(ref mut heap) => unsafe {
-                let this = core::str::from_utf8_unchecked(heap.as_slice());
-                assert!(this.is_char_boundary(idx));
+            Self::Heap(ref mut heap) => {
+                assert!(heap.as_str().is_char_boundary(idx));
 
                 heap.reserve(string_len);
-                insert_bytes_into(heap.as_mut_ptr(), heap.len(), idx, string.as_bytes());
-                heap.set_len(heap.len() + string_len);
+                unsafe {
+                    insert_bytes_into(heap.as_mut_ptr(), heap.len(), idx, string.as_bytes());
+                    heap.set_len(heap.len() + string_len);
+                }
             },
             Self::Sso(ref mut sso) => {
                 assert!(sso.is_char_boundary(idx));
