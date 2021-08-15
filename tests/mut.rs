@@ -38,3 +38,76 @@ pub fn should_push_various_chunks() {
 
     stroka.clear();
 }
+
+#[test]
+pub fn should_remove_from_sso_string() {
+    const TEXT: &str = "1単語8";
+    let mut stroka = stroka::String::new_str(TEXT);
+
+    assert!(!stroka.is_heap());
+    assert_eq!(stroka, TEXT);
+
+    stroka.remove(1);
+    assert_eq!(stroka, "1語8");
+
+    stroka.remove(4);
+    assert_eq!(stroka, "1語");
+    stroka.remove(0);
+    assert_eq!(stroka, "語");
+    stroka.remove(0);
+    assert_eq!(stroka, "");
+}
+
+#[test]
+#[should_panic]
+pub fn should_panic_on_non_char_bound_remove_from_sso_string() {
+    const TEXT: &str = "1単語8";
+    let mut stroka = stroka::String::new_str(TEXT);
+    stroka.remove(2);
+}
+
+#[test]
+#[should_panic]
+pub fn should_panic_on_remove_from_outside_of_sso_string() {
+    const TEXT: &str = "1単語8";
+    let mut stroka = stroka::String::new_str(TEXT);
+    stroka.remove(usize::max_value());
+}
+
+#[test]
+pub fn should_remove_from_heap_string() {
+    const TEXT: &str = "123456789単語123456789";
+    let mut stroka = stroka::String::new_str(TEXT);
+
+    assert!(stroka.is_heap());
+    assert_eq!(stroka, TEXT);
+
+    stroka.remove(1);
+    assert_eq!(stroka, "13456789単語123456789");
+    stroka.remove(8);
+    assert_eq!(stroka, "13456789語123456789");
+    stroka.remove(19);
+    assert_eq!(stroka, "13456789語12345678");
+    stroka.remove(0);
+    assert_eq!(stroka, "3456789語12345678");
+    stroka.remove(6);
+    assert_eq!(stroka, "345678語12345678");
+    stroka.remove(6);
+    assert_eq!(stroka, "34567812345678");
+}
+
+#[test]
+#[should_panic]
+pub fn should_panic_on_non_char_bound_remove_from_heap_string() {
+    const TEXT: &str = "123456789単語123456789";
+    let mut stroka = stroka::String::new_str(TEXT);
+    stroka.remove(10);
+}
+
+#[test]
+#[should_panic]
+pub fn should_panic_on_remove_from_outside_of_heap_string() {
+    const TEXT: &str = "123456789単語123456789";
+    let mut stroka = stroka::String::new_str(TEXT);
+    stroka.remove(usize::max_value());
+}

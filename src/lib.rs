@@ -4,6 +4,13 @@
 //!
 //! - `serde` - Enables `Serialize` and `Deserialize` implementations.
 //! - `std` - Enables traits implementations dependent on `std`.
+//!
+//! ## Missing functions
+//!
+//! - `String::from_utf8` - due to `minivec` yet to be stable.
+//! - `String::from_utf8_unchecked` - due to `minivec` yet to be stable.
+//! - `String::into_bytes` - due to `minivec` yet to be stable.
+//! - Unstable functions of Vec - due to them being potentially changed.
 #![no_std]
 #![warn(missing_docs)]
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::style))]
@@ -289,6 +296,50 @@ impl String {
         };
 
         Some(result)
+    }
+
+    #[inline]
+    ///Removes character at the specified `idx`
+    ///
+    ///This is an *O*(*n*) operation, as it requires copying every element in the buffer.
+    ///
+    ///# Panics
+    ///
+    ///If `idx` is larger than or equal to the `String`'s length, or if it does not lie on a [`char`] boundary.
+    pub fn remove(&mut self, idx: usize) -> char {
+        let result = match self {
+            Self::Heap(ref mut heap) => unsafe {
+                let text = core::str::from_utf8_unchecked_mut(heap.as_mut_slice());
+
+                let ch = match text[idx..].chars().next() {
+                    Some(ch) => ch,
+                    None => panic!("cannot remove a char from the end of a string")
+                };
+
+                let next = idx + ch.len_utf8();
+                let len = heap.len();
+
+                ptr::copy(heap.as_ptr().add(next), heap.as_mut_ptr().add(idx), len - next);
+                heap.set_len(len - (next - idx));
+                ch
+            },
+            Self::Sso(ref mut sso) => {
+                let ch = match sso.as_str()[idx..].chars().next() {
+                    Some(ch) => ch,
+                    None => panic!("cannot remove a char from the end of a string")
+                };
+
+                let next = idx + ch.len_utf8();
+                let len = sso.len();
+                unsafe {
+                    ptr::copy(sso.as_ptr().add(next), sso.as_mut_ptr().add(idx), len - next);
+                    sso.set_len(len as u8 - (next as u8 - idx as u8));
+                }
+                ch
+            }
+        };
+
+        result
     }
 
     #[inline(always)]
