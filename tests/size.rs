@@ -14,14 +14,14 @@ pub fn should_become_heap_allocated_on_buffer_overflow() {
     assert!(!stroka.is_heap());
 
     let mut expected_string = String::new();
-    for idx in  0..sso_capaicty {
+    for idx in  0..sso_capaicty+1 {
         let idx = format!("{}", (idx + 1) % 9);
         expected_string.push_str(&idx);
         stroka.push_str(&idx);
     }
 
     assert!(stroka.is_heap());
-    assert_eq!(stroka.len(), sso_capaicty);
+    assert_eq!(stroka.len(), sso_capaicty+1);
     assert_eq!(stroka, expected_string);
 }
 

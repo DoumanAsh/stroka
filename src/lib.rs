@@ -29,6 +29,13 @@ type HeapStr = minivec::MiniVec<u8>;
 const SSO_MAX_SIZE: usize = mem::size_of::<HeapStr>() * 2 - 2;
 type StrBuf = str_buf::StrBuf<{SSO_MAX_SIZE}>;
 
+#[inline(always)]
+unsafe fn insert_bytes_into(ptr: *mut u8, len: usize, idx: usize, bytes: &[u8]) {
+    let bytes_len = bytes.len();
+    ptr::copy(ptr.add(idx), ptr.add(idx + bytes_len), len - idx);
+    ptr::copy(bytes.as_ptr(), ptr.add(idx), bytes_len);
+}
+
 ///`String`, similar to that in `std`, but optimized with SSO (small string optimization).
 ///
 ///Its size is limited to 2 words (i.e. `mem::size_of::<usize>()`).
@@ -354,17 +361,66 @@ impl String {
     #[inline]
     ///Appends given `string` at the end.
     pub fn push_str(&mut self, string: &str) {
-        let len = self.len();
         match self {
             Self::Heap(ref mut heap) => heap.extend_from_slice(string.as_bytes()),
             Self::Sso(ref mut sso) => {
-                if sso.remaining() < len {
-                    let mut heap = self.assert_heap_from_sso(len + string.len());
+                let len = sso.len();
+                let string_len = string.len();
+                if sso.remaining() < string_len {
+                    let mut heap = self.assert_heap_from_sso(len + string_len);
                     heap.extend_from_slice(string.as_bytes());
                     *self = Self::Heap(heap);
                 } else {
                     unsafe {
                         sso.push_str_unchecked(string);
+                    }
+                }
+            }
+        }
+    }
+
+    #[inline]
+    ///Inserts `char` at the given position
+    ///# Panics
+    ///
+    ///Panics if `new_len` does not lie on a `char` boundary.
+    pub fn insert(&mut self, idx: usize, ch: char) {
+        let mut bits = [0; 4];
+        self.insert_str(idx, ch.encode_utf8(&mut bits))
+    }
+
+    #[inline]
+    ///Inserts `str` at the given position
+    ///
+    ///# Panics
+    ///
+    ///Panics if `new_len` does not lie on a `char` boundary.
+    pub fn insert_str(&mut self, idx: usize, string: &str) {
+        let string_len = string.len();
+        match self {
+            Self::Heap(ref mut heap) => unsafe {
+                let this = core::str::from_utf8_unchecked(heap.as_slice());
+                assert!(this.is_char_boundary(idx));
+
+                heap.reserve(string_len);
+                insert_bytes_into(heap.as_mut_ptr(), heap.len(), idx, string.as_bytes());
+                heap.set_len(heap.len() + string_len);
+            },
+            Self::Sso(ref mut sso) => {
+                assert!(sso.is_char_boundary(idx));
+
+                let len = sso.len();
+                if sso.remaining() < string_len {
+                    let mut heap = self.assert_heap_from_sso(len + string_len);
+                    unsafe {
+                        insert_bytes_into(heap.as_mut_ptr(), heap.len(), idx, string.as_bytes());
+                        heap.set_len(len + string_len);
+                    }
+                    *self = Self::Heap(heap);
+                } else {
+                    unsafe {
+                        insert_bytes_into(sso.as_mut_ptr(), len, idx, string.as_bytes());
+                        sso.set_len(len as u8 + string_len as u8);
                     }
                 }
             }

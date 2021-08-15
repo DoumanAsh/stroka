@@ -48,7 +48,7 @@ jobs:
       run: cargo clippy --features serde,std -- -D warnings
 
     - name: Test
-      run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind" cargo test --features serde,std
+      run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --leak-check=full" cargo test --features serde,std
 
     - name: Test (Optimized)
-      run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind" cargo test --release --features serde,std
+      run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --leak-check=full" cargo test --release --features serde,std

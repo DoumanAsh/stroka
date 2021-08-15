@@ -111,3 +111,28 @@ pub fn should_panic_on_remove_from_outside_of_heap_string() {
     let mut stroka = stroka::String::new_str(TEXT);
     stroka.remove(usize::max_value());
 }
+
+#[test]
+pub fn should_insert_at_any_valid_position() {
+    const TEXT: &str = "1単語8";
+
+    let mut stroka = stroka::String::new();
+
+    stroka.insert_str(0, TEXT);
+    assert_eq!(stroka, TEXT);
+
+    stroka.insert_str(1, TEXT);
+    assert_eq!(stroka, "11単語8単語8");
+    stroka.insert_str(stroka.len(), TEXT);
+    assert_eq!(stroka, "11単語8単語81単語8");
+    stroka.insert_str(stroka.len() - 1, TEXT);
+    assert_eq!(stroka, "11単語8単語81単語1単語88");
+}
+
+#[test]
+#[should_panic]
+pub fn should_panic_on_insert_outside_of_bound() {
+    const TEXT: &str = "123456789単語123456789";
+    let mut stroka = stroka::String::new_str(TEXT);
+    stroka.insert_str(usize::max_value(), TEXT);
+}
