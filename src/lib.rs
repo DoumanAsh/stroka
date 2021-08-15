@@ -3,6 +3,7 @@
 //! ## Features
 //!
 //! - `serde` - Enables `Serialize` and `Deserialize` implementations.
+//! - `std` - Enables traits implementations dependent on `std`.
 #![no_std]
 #![warn(missing_docs)]
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::style))]
@@ -11,6 +12,8 @@ extern crate alloc;
 
 #[cfg(feature = "serde")]
 mod serde;
+#[cfg(feature = "std")]
+mod std;
 mod utils;
 
 use core::{ptr, mem, fmt, hash};
@@ -370,6 +373,72 @@ impl From<&String> for String {
     #[inline(always)]
     fn from(s: &String) -> String {
         s.clone()
+    }
+}
+
+impl From<alloc::boxed::Box<str>> for String {
+    #[inline(always)]
+    fn from(s: alloc::boxed::Box<str>) -> String {
+        Self::new_str(&s)
+    }
+}
+
+impl<'a> Extend<&'a char> for String {
+    #[inline]
+    fn extend<I: IntoIterator<Item = &'a char>>(&mut self, iter: I) {
+        let iter = iter.into_iter();
+        let (lower_bound, _) = iter.size_hint();
+        self.reserve(lower_bound);
+        for ch in iter {
+            self.push(*ch)
+        }
+    }
+}
+
+impl Extend<char> for String {
+    #[inline]
+    fn extend<I: IntoIterator<Item = char>>(&mut self, iter: I) {
+        let iter = iter.into_iter();
+        let (lower_bound, _) = iter.size_hint();
+        self.reserve(lower_bound);
+        for ch in iter {
+            self.push(ch)
+        }
+    }
+}
+
+impl<'a> Extend<&'a str> for String {
+    #[inline(always)]
+    fn extend<I: IntoIterator<Item = &'a str>>(&mut self, iter: I) {
+        iter.into_iter().for_each(move |s| self.push_str(s));
+    }
+}
+
+impl Extend<alloc::boxed::Box<str>> for String {
+    #[inline(always)]
+    fn extend<I: IntoIterator<Item = alloc::boxed::Box<str>>>(&mut self, iter: I) {
+        iter.into_iter().for_each(move |s| self.push_str(&s));
+    }
+}
+
+impl<'a> Extend<alloc::borrow::Cow<'a, str>> for String {
+    #[inline(always)]
+    fn extend<I: IntoIterator<Item = alloc::borrow::Cow<'a, str>>>(&mut self, iter: I) {
+        iter.into_iter().for_each(move |s| self.push_str(&s));
+    }
+}
+
+impl Extend<String> for String {
+    #[inline(always)]
+    fn extend<I: IntoIterator<Item = String>>(&mut self, iter: I) {
+        iter.into_iter().for_each(move |s| self.push_str(&s));
+    }
+}
+
+impl From<alloc::borrow::Cow<'_, str>> for String {
+    #[inline(always)]
+    fn from(s: alloc::borrow::Cow<'_, str>) -> String {
+        Self::new_str(&s)
     }
 }
 

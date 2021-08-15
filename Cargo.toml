@@ -26,3 +26,10 @@ default-features = false
 version = "1"
 default-features = false
 optional = true
+
+[features]
+# Enables std traits
+std = []
+
+[package.metadata.docs.rs]
+features = ["std", "serde"]
