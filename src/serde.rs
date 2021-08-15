@@ -44,7 +44,7 @@ mod tests {
         let des = BorrowedStrDeserializer::<ValueError>::new("lolka");
         let res = String::deserialize(des).expect("Unexpected fail");
         assert_eq!(res, "lolka");
-        assert!(!res.is_heap());
+        assert!(!res.is_alloc());
     }
 
     #[test]
@@ -53,6 +53,6 @@ mod tests {
         let des = BorrowedStrDeserializer::<ValueError>::new(TEXT);
         let res = String::deserialize(des).expect("Unexpected fail");
         assert_eq!(res.as_str(), TEXT);
-        assert!(res.is_heap());
+        assert!(res.is_alloc());
     }
 }

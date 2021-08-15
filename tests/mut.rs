@@ -6,7 +6,7 @@ pub fn should_not_reserve_within_sso_capacity() {
 
     for idx in 0..=MAX_CAP {
         stroka.reserve(idx);
-        assert!(!stroka.is_heap());
+        assert!(!stroka.is_alloc());
     }
 }
 
@@ -44,7 +44,7 @@ pub fn should_remove_from_sso_string() {
     const TEXT: &str = "1単語8";
     let mut stroka = stroka::String::new_str(TEXT);
 
-    assert!(!stroka.is_heap());
+    assert!(!stroka.is_alloc());
     assert_eq!(stroka, TEXT);
 
     stroka.remove(1);
@@ -79,7 +79,7 @@ pub fn should_remove_from_heap_string() {
     const TEXT: &str = "123456789単語123456789";
     let mut stroka = stroka::String::new_str(TEXT);
 
-    assert!(stroka.is_heap());
+    assert!(stroka.is_alloc());
     assert_eq!(stroka, TEXT);
 
     stroka.remove(1);
@@ -141,7 +141,7 @@ pub fn should_insert_at_any_valid_position() {
 pub fn should_retain_within_sso() {
     const TEXT: &str = "1--単語8-";
     let mut stroka = stroka::String::new_sso(TEXT);
-    assert!(!stroka.is_heap());
+    assert!(!stroka.is_alloc());
 
     stroka.retain(|ch| ch.len_utf8() == 1);
     assert_eq!(stroka, "1--8-");
@@ -153,7 +153,7 @@ pub fn should_retain_within_sso() {
 pub fn should_retain_within_heap() {
     const TEXT: &str = "-1++1-単語8単語81単語1単語8+8-++";
     let mut stroka = stroka::String::new_str(TEXT);
-    assert!(stroka.is_heap());
+    assert!(stroka.is_alloc());
 
     assert_eq!(stroka.len(), TEXT.len());
     stroka.retain(|ch| ch.len_utf8() == 1);

@@ -95,7 +95,7 @@ impl String {
 
     #[inline]
     ///Returns whether string is heap allocated.
-    pub const fn is_heap(&self) -> bool {
+    pub const fn is_alloc(&self) -> bool {
         match self {
             Self::Heap(_) => true,
             Self::Sso(_) => false,
