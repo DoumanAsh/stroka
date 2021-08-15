@@ -44,6 +44,9 @@ jobs:
         cargo --version
         rustc --version
 
+    - name: Lints
+      run: cargo clippy --features serde,std -- -D warnings
+
     - name: Test
       run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind" cargo test --features serde,std
 
