@@ -1,0 +1,39 @@
+name: Coverage
+
+on:
+  workflow_run:
+    workflows: ["Rust"]
+    branches: [master]
+    types:
+      - completed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Install Rust Unix
+      if: runner.os != 'Windows'
+      run: |
+        if rustup --version >/dev/null 2>&1; then
+            rustup install nightly
+            rustup default nightly
+        else
+             curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain nightly
+             echo ::add-path::$HOME/.cargo/bin
+        fi
+
+    - name: Install tools
+      run: cargo install cargo-binutils && rustup component add llvm-tools-preview && cargo install rustfilt
+
+    - name: Run coverage tests
+      run: sh cov.sh && mkdir coverage/ && mv stroka-coverage.html coverage/index.html
+
+    - name: Upload coverage report to gh-pages
+      uses: JamesIves/github-pages-deploy-action@4.1.4
+      with:
+        branch: gh-pages
+        folder: ./coverage/

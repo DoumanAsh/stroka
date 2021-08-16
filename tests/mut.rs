@@ -1,3 +1,5 @@
+use core::ops::Bound;
+
 #[test]
 pub fn should_not_reserve_within_sso_capacity() {
     const MAX_CAP: usize = core::mem::size_of::<usize>() * 2 - 2;
@@ -33,6 +35,16 @@ pub fn should_push_various_chunks() {
         expected_string.push(ch);
         stroka.push(ch);
     }
+
+    assert_eq!(stroka, expected_string);
+
+    stroka.push_str("ロりr");
+    expected_string.push_str("ロりr");
+
+    assert_eq!(stroka, expected_string);
+
+    stroka.push('ロ');
+    expected_string.push('ロ');
 
     assert_eq!(stroka, expected_string);
 
@@ -189,8 +201,6 @@ pub fn should_replace_range_within_heap_string() {
 
 #[test]
 pub fn should_replace_range_within_sso_string() {
-    use core::ops::Bound;
-
     const TEXT: &str = "1単語8";
     let mut stroka = stroka::String::new_str(TEXT);
 
@@ -199,7 +209,7 @@ pub fn should_replace_range_within_sso_string() {
     stroka.replace_range((Bound::Included(0), Bound::Excluded(1)), "3");
     assert_eq!(stroka, "3単語8");
 
-    stroka.replace_range((Bound::Included(0), Bound::Excluded(1)), "44");
+    stroka.replace_range((Bound::Unbounded, Bound::Excluded(1)), "44");
     assert_eq!(stroka, "44単語8");
     stroka.replace_range((Bound::Included(0), Bound::Included(1)), "5");
     assert_eq!(stroka, "5単語8");
@@ -219,7 +229,16 @@ pub fn should_replace_range_within_sso_string() {
     assert_eq!(stroka, new);
 
     let new = "-".repeat(stroka.capacity());
-    stroka.replace_range((Bound::Excluded(0), Bound::Excluded(stroka.len())), &new);
+    stroka.replace_range((Bound::Excluded(0), Bound::Unbounded), &new);
     assert!(stroka.is_alloc());
     assert_eq!(stroka, format!("+{}", new));
+}
+
+#[test]
+#[should_panic]
+pub fn should_panic_on_reverse_replace_range() {
+    const TEXT: &str = "12345";
+    let mut stroka = stroka::String::new_str(TEXT);
+
+    stroka.replace_range((Bound::Included(3), Bound::Excluded(1)), "3");
 }
