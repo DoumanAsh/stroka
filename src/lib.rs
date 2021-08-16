@@ -500,6 +500,107 @@ impl String {
     }
 
     #[inline]
+    ///Removes the specified range in the string, and replaces it with the given string.
+    ///The given string doesn't need to be the same length as the range.
+    ///
+    ///## Panics
+    ///
+    ///Panics if the starting point or end point do not lie on a [`char`] boundary, or if they're out of bounds.
+    pub fn replace_range<R: core::ops::RangeBounds<usize>>(&mut self, range: R, string: &str) {
+        //verifies validity of range and returns its length
+        fn assert_range_len(this: &str, start: core::ops::Bound<&usize>, end: core::ops::Bound<&usize>) -> (usize, usize, usize) {
+            let start = match start {
+                core::ops::Bound::Included(n) => {
+                    assert!(this.is_char_boundary(*n));
+                    *n
+                },
+                core::ops::Bound::Excluded(n) => {
+                    let n = n.saturating_add(1);
+                    assert!(this.is_char_boundary(n));
+                    n
+                },
+                core::ops::Bound::Unbounded => 0,
+            };
+            let end = match end {
+                core::ops::Bound::Included(n) => {
+                    let n = n.saturating_add(1);
+                    assert!(this.is_char_boundary(n));
+                    n
+                },
+                core::ops::Bound::Excluded(n) => {
+                    assert!(this.is_char_boundary(*n));
+                    *n
+                },
+                core::ops::Bound::Unbounded => this.len()
+            };
+
+            if start > end {
+                panic!("start '{}' is greater than end '{}'", start, end);
+            }
+
+            (start, end, end - start)
+        }
+
+        //Defense against retarded impl
+        let range_start = range.start_bound();
+        let range_end = range.end_bound();
+
+        match self {
+            Self::Heap(ref mut heap) => {
+                let text = heap.as_str();
+                let (start, _, range_size) = assert_range_len(text, range_start, range_end);
+                if range_size == string.len() {
+                    unsafe {
+                        ptr::copy(string.as_ptr(), heap.as_mut_ptr().add(start), range_size);
+                    }
+                } else {
+                    heap.splice((range_start, range_end), string.bytes());
+                }
+            },
+            Self::Sso(ref mut sso) => {
+                let (start, end, range_size) = assert_range_len(sso.as_str(), range_start, range_end);
+                let required = sso.len() - range_size + string.len();
+                if StrBuf::capacity() < required {
+                    let mut heap = self.assert_heap_from_sso(required);
+                    if range_size == string.len() {
+                        unsafe {
+                            ptr::copy(string.as_ptr(), heap.as_mut_ptr().add(start), range_size);
+                        }
+                    } else {
+                        heap.splice((range_start, range_end), string.bytes());
+                    }
+                    *self = Self::Heap(heap);
+                } else {
+                    if range_size == string.len() {
+                        unsafe {
+                            ptr::copy(string.as_ptr(), sso.as_mut_ptr().add(start), range_size);
+                        }
+                    } else  {
+                        if let Some(diff) = range_size.checked_sub(string.len()) {
+                            //range_size > string.len()
+                            unsafe {
+                                ptr::copy(sso.as_ptr().add(end), sso.as_mut_ptr().add(start + diff), sso.len() - diff);
+                            }
+                        } else {
+                            let diff = string.len() - range_size;
+                            if let Some(len_diff) = sso.len().checked_sub(diff) {
+                                unsafe {
+                                    ptr::copy(sso.as_ptr().add(start + diff), sso.as_mut_ptr().add(end + diff), len_diff);
+                                }
+                            }
+                        }
+
+                        unsafe {
+                            ptr::copy(string.as_ptr(), sso.as_mut_ptr().add(start), string.len());
+                            sso.set_len(required as _);
+                        }
+                    }
+                }
+            },
+        }
+    }
+
+    #[inline]
     ///Decodes a UTF-16–encoded sequence into `String`.
     ///
     ///In case of invalid character, returns `DecodeUtf16Error`
