@@ -24,6 +24,8 @@ mod serde;
 #[cfg(feature = "std")]
 mod std;
 mod core_traits;
+mod str_ext;
+pub use str_ext::StrExt;
 mod utils;
 use utils::MiniStr;
 
@@ -101,6 +103,17 @@ impl String {
         match self {
             Self::Heap(_) => true,
             Self::Sso(_) => false,
+        }
+    }
+
+    #[inline]
+    ///Sets string length, ignoring whathever capacity is available.
+    ///
+    ///User is responsible to guarantee that `0..new_len` is valid string
+    pub unsafe fn set_len(&mut self, new_len: usize) {
+        match self {
+            Self::Heap(ref mut buf) => buf.set_len(new_len ),
+            Self::Sso(ref mut string) => string.set_len(new_len as u8),
         }
     }
 
