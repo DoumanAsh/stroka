@@ -5,6 +5,7 @@ fn should_make_uppercase() {
     let s = "Grüße, Jürgen ❤";
 
     assert_eq!("GRüßE, JüRGEN ❤", StrExt::to_ascii_uppercase(s));
+    assert_eq!(str::to_uppercase(s), StrExt::to_uppercase(s));
 }
 
 #[test]
@@ -12,6 +13,7 @@ fn should_make_lowercase() {
     let s = "Grüße, Jürgen ❤";
 
     assert_eq!("grüße, jürgen ❤", StrExt::to_ascii_lowercase(s));
+    assert_eq!(str::to_lowercase("GRÜSSE, JÜRGEN ❤"), StrExt::to_lowercase("GRÜSSE, JÜRGEN ❤"));
 }
 
 #[test]

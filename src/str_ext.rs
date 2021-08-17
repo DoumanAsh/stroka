@@ -10,6 +10,12 @@ pub trait StrExt {
     ///This function will panic if the capacity would overflow.
     fn repeat(&self, times: usize) -> String;
 
+    ///Returns the lowercase equivalent of this string slice, as a new `String`.
+    fn to_lowercase(&self) -> String;
+
+    ///Returns the uppercase equivalent of this string slice, as a new `String`.
+    fn to_uppercase(&self) -> String;
+
     ///Returns a copy of this string where each character is mapped to its
     ///ASCII upper case equivalent.
     ///
@@ -49,6 +55,42 @@ impl StrExt for str {
         } else {
             String::new()
         }
+    }
+
+    #[inline]
+    fn to_lowercase(&self) -> String {
+        let mut res = String::with_capacity(self.len());
+
+        for ch in self.chars() {
+            for ch in ch.to_lowercase() {
+                res.push(ch)
+            }
+        }
+
+        //do it when core::unicode is stable
+        //I don't fucking care about greek bullshit enough to copy-paste whole unicode shite.
+        //for (idx, ch) in self.char_indices() {
+        //    if ch == 'Σ' {
+        //    } else {
+        //        for ch in ch.to_lowercase() {
+        //            res.push(ch)
+        //        }
+        //    }
+        //}
+
+        res
+    }
+
+    #[inline]
+    fn to_uppercase(&self) -> String {
+        let mut res = String::with_capacity(self.len());
+        for ch in self.chars() {
+            for ch in ch.to_uppercase() {
+                res.push(ch)
+            }
+        }
+
+        res
     }
 
     #[inline]
