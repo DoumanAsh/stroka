@@ -71,6 +71,41 @@ pub fn should_remove_from_sso_string() {
 }
 
 #[test]
+pub fn should_drain_from_sso_string() {
+    const TEXT: &str = "1単語8";
+    let mut stroka = stroka::String::new_str(TEXT);
+
+    assert!(!stroka.is_alloc());
+
+    let chars = stroka.drain(..1).collect::<Vec<_>>();
+    assert_eq!(chars, ['1']);
+    assert_eq!(stroka, "単語8");
+
+    let chars = stroka.drain(stroka.len()-1..).collect::<Vec<_>>();
+    assert_eq!(chars, ['8']);
+    assert_eq!(stroka, "単語");
+
+    let chars = stroka.drain(..).collect::<Vec<_>>();
+    assert_eq!(chars, ['単', '語']);
+    assert_eq!(stroka, "");
+
+    let chars = stroka.drain(..).collect::<Vec<_>>();
+    assert_eq!(chars, []);
+    assert_eq!(stroka, "");
+
+    stroka.push_str(TEXT);
+    assert_eq!(stroka, "1単語8");
+
+    let chars = stroka.drain(1..stroka.len()-1).collect::<Vec<_>>();
+    assert_eq!(chars, ['単', '語']);
+    assert_eq!(stroka, "18");
+
+    let chars = stroka.drain(..).collect::<Vec<_>>();
+    assert_eq!(chars, ['1', '8']);
+    assert_eq!(stroka, "");
+}
+
+#[test]
 #[should_panic]
 pub fn should_panic_on_non_char_bound_remove_from_sso_string() {
     const TEXT: &str = "1単語8";
@@ -107,6 +142,39 @@ pub fn should_remove_from_heap_string() {
     stroka.remove(6);
     assert_eq!(stroka, "34567812345678");
 }
+
+#[test]
+pub fn should_drain_from_heap_string() {
+    const TEXT: &str = "123456789単語123456789";
+    let mut stroka = stroka::String::new_str(TEXT);
+
+    assert!(stroka.is_alloc());
+
+    let chars = stroka.drain(..1).collect::<Vec<_>>();
+    assert_eq!(chars, ['1']);
+    assert_eq!(stroka, "23456789単語123456789");
+
+    let chars = stroka.drain(stroka.len()-1..).collect::<Vec<_>>();
+    assert_eq!(chars, ['9']);
+    assert_eq!(stroka, "23456789単語12345678");
+
+    let chars = stroka.drain(8..14).collect::<Vec<_>>();
+    assert_eq!(chars, ['単', '語']);
+    assert_eq!(stroka, "2345678912345678");
+
+    let chars = stroka.drain(..8).collect::<Vec<_>>();
+    assert_eq!(chars, ['2', '3', '4', '5', '6', '7', '8', '9']);
+    assert_eq!(stroka, "12345678");
+
+    let chars = stroka.drain(..).collect::<Vec<_>>();
+    assert_eq!(chars, ['1', '2', '3', '4', '5', '6', '7', '8']);
+    assert_eq!(stroka, "");
+
+    let chars = stroka.drain(..).collect::<Vec<_>>();
+    assert_eq!(chars, []);
+    assert_eq!(stroka, "");
+}
+
 
 #[test]
 #[should_panic]

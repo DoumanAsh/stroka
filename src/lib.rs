@@ -28,6 +28,8 @@ mod str_ext;
 pub use str_ext::StrExt;
 mod utils;
 use utils::MiniStr;
+mod drain;
+pub use drain::Drain;
 
 use core::{ptr, mem};
 
@@ -545,6 +547,33 @@ impl String {
                     }
                 }
             }
+        }
+    }
+
+    #[inline]
+    ///Creates a draining iterator that removes the specified range in the `String` and yields the removed `chars`.
+    ///
+    ///Note: The element range is removed even if the iterator is not consumed until the end.
+    ///
+    ///# Panics
+    ///
+    ///Panics if the starting point or end point do not lie on a `char` boundary, or if they're out of bounds.
+    pub fn drain<R: core::ops::RangeBounds<usize>>(&mut self, range: R) -> Drain<'_> {
+        //Defense against retarded impl
+        let range_start = range.start_bound();
+        let range_end = range.end_bound();
+
+        let (start, end, _) = assert_range_len(self.as_str(), range_start, range_end);
+        let string = self as *mut _;
+        let chars = unsafe {
+            self.as_str().get_unchecked(start..end).chars()
+        };
+
+        Drain {
+            string,
+            start,
+            end,
+            chars,
         }
     }
 
