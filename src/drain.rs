@@ -1,5 +1,5 @@
 use crate::String;
-use core::ptr;
+use core::{fmt, ptr};
 use core::str::Chars;
 use core::iter::{FusedIterator, DoubleEndedIterator};
 
@@ -70,3 +70,13 @@ impl<'a> Drop for Drain<'a> {
         }
     }
 }
+
+impl fmt::Debug for Drain<'_> {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Drain").field(&self.as_str()).finish()
+    }
+}
+
+unsafe impl Sync for Drain<'_> {}
+unsafe impl Send for Drain<'_> {}
