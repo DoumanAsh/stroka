@@ -42,6 +42,40 @@ unsafe fn insert_bytes_into(ptr: *mut u8, len: usize, idx: usize, bytes: &[u8]) 
     ptr::copy(bytes.as_ptr(), ptr.add(idx), bytes_len);
 }
 
+//verifies validity of range and returns its length
+fn assert_range_len(this: &str, start: core::ops::Bound<&usize>, end: core::ops::Bound<&usize>) -> (usize, usize, usize) {
+    let start = match start {
+        core::ops::Bound::Included(n) => {
+            assert!(this.is_char_boundary(*n));
+            *n
+        },
+        core::ops::Bound::Excluded(n) => {
+            let n = n.saturating_add(1);
+            assert!(this.is_char_boundary(n));
+            n
+        },
+        core::ops::Bound::Unbounded => 0,
+    };
+    let end = match end {
+        core::ops::Bound::Included(n) => {
+            let n = n.saturating_add(1);
+            assert!(this.is_char_boundary(n));
+            n
+        },
+        core::ops::Bound::Excluded(n) => {
+            assert!(this.is_char_boundary(*n));
+            *n
+        },
+        core::ops::Bound::Unbounded => this.len()
+    };
+
+    if start > end {
+        panic!("start '{}' is greater than end '{}'", start, end);
+    }
+
+    (start, end, end - start)
+}
+
 ///`String`, similar to that in `std`, but optimized with SSO (small string optimization).
 ///
 ///Its size is limited to 2 words (i.e. `mem::size_of::<usize>()`).
@@ -514,6 +548,38 @@ impl String {
         }
     }
 
+    ///Removes the specified within the string.
+    ///
+    ///## Note
+    ///
+    ///This API is not part of `String` original API.
+    ///
+    ///## Panics
+    ///
+    ///Panics if the starting point or end point do not lie on a [`char`] boundary, or if they're out of bounds.
+    pub fn remove_range<R: core::ops::RangeBounds<usize>>(&mut self, range: R) {
+        //Defense against retarded impl
+        let range_start = range.start_bound();
+        let range_end = range.end_bound();
+
+        match self {
+            Self::Heap(ref mut heap) => {
+                let (start, end, range_size) = assert_range_len(heap.as_str(), range_start, range_end);
+                unsafe {
+                    ptr::copy(heap.as_ptr().add(end), heap.as_mut_ptr().add(start), heap.len() - start - range_size);
+                    heap.set_len(heap.len() - range_size);
+                }
+            },
+            Self::Sso(ref mut sso) => {
+                let (start, end, range_size) = assert_range_len(sso.as_str(), range_start, range_end);
+                unsafe {
+                    ptr::copy(sso.as_ptr().add(end), sso.as_mut_ptr().add(start), sso.len() - start - range_size);
+                    sso.set_len(sso.len() as u8 - range_size as u8);
+                }
+            }
+        }
+    }
+
     #[inline]
     ///Removes the specified range in the string, and replaces it with the given string.
     ///The given string doesn't need to be the same length as the range.
@@ -522,40 +588,6 @@ impl String {
     ///
     ///Panics if the starting point or end point do not lie on a [`char`] boundary, or if they're out of bounds.
     pub fn replace_range<R: core::ops::RangeBounds<usize>>(&mut self, range: R, string: &str) {
-        //verifies validity of range and returns its length
-        fn assert_range_len(this: &str, start: core::ops::Bound<&usize>, end: core::ops::Bound<&usize>) -> (usize, usize, usize) {
-            let start = match start {
-                core::ops::Bound::Included(n) => {
-                    assert!(this.is_char_boundary(*n));
-                    *n
-                },
-                core::ops::Bound::Excluded(n) => {
-                    let n = n.saturating_add(1);
-                    assert!(this.is_char_boundary(n));
-                    n
-                },
-                core::ops::Bound::Unbounded => 0,
-            };
-            let end = match end {
-                core::ops::Bound::Included(n) => {
-                    let n = n.saturating_add(1);
-                    assert!(this.is_char_boundary(n));
-                    n
-                },
-                core::ops::Bound::Excluded(n) => {
-                    assert!(this.is_char_boundary(*n));
-                    *n
-                },
-                core::ops::Bound::Unbounded => this.len()
-            };
-
-            if start > end {
-                panic!("start '{}' is greater than end '{}'", start, end);
-            }
-
-            (start, end, end - start)
-        }
-
         //Defense against retarded impl
         let range_start = range.start_bound();
         let range_end = range.end_bound();

@@ -200,6 +200,52 @@ pub fn should_replace_range_within_heap_string() {
 }
 
 #[test]
+pub fn should_remove_range_within_heap_string() {
+    use core::ops::Bound;
+
+    const TEXT: &str = "123456789単語123456789";
+    let mut stroka = stroka::String::new_str(TEXT);
+    assert!(stroka.is_alloc());
+
+    stroka.remove_range((Bound::Included(0), Bound::Included(1)));
+    assert_eq!(stroka, "3456789単語123456789");
+    stroka.remove_range((Bound::Included(7), Bound::Excluded(13)));
+    assert_eq!(stroka, "3456789123456789");
+    stroka.remove_range((Bound::Included(stroka.len()), Bound::Unbounded));
+    assert_eq!(stroka, "3456789123456789");
+    stroka.remove_range((Bound::Excluded(stroka.len() - 1), Bound::Unbounded));
+    assert_eq!(stroka, "3456789123456789");
+    stroka.remove_range((Bound::Included(stroka.len() - 1), Bound::Unbounded));
+    assert_eq!(stroka, "345678912345678");
+    stroka.remove_range(..);
+    assert_eq!(stroka, "");
+}
+
+#[test]
+pub fn should_remove_range_within_sso_string() {
+    const TEXT: &str = "1単語9";
+    let mut stroka = stroka::String::new_str(TEXT);
+    assert!(!stroka.is_alloc());
+
+    stroka.remove_range(stroka.len()-1..);
+    assert_eq!(stroka, "1単語");
+
+    stroka.remove_range(1..=3);
+    assert_eq!(stroka, "1語");
+    stroka.remove_range(1..=3);
+    assert_eq!(stroka, "1");
+    stroka.remove_range(..);
+    assert_eq!(stroka, "");
+    stroka.remove_range(..);
+    assert_eq!(stroka, "");
+
+    stroka.push_str(TEXT);
+    assert_eq!(stroka, "1単語9");
+    stroka.remove_range(1..stroka.len()-1);
+    assert_eq!(stroka, "19");
+}
+
+#[test]
 pub fn should_replace_range_within_sso_string() {
     const TEXT: &str = "1単語8";
     let mut stroka = stroka::String::new_str(TEXT);
