@@ -1,6 +1,12 @@
 use core::ops::Bound;
 
 #[test]
+pub fn should_have_format_macro() {
+    let result = stroka::format!("{0} + {0} = {1}", 1, 2);
+    assert_eq!(result, "1 + 1 = 2");
+}
+
+#[test]
 pub fn should_not_reserve_within_sso_capacity() {
     const MAX_CAP: usize = core::mem::size_of::<usize>() * 2 - 2;
 

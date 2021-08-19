@@ -710,3 +710,14 @@ impl String {
         res
     }
 }
+
+#[macro_export]
+///`format` macro to replace std's macro
+macro_rules! format {
+    ($($arg:tt)*) => {{
+        let mut res = $crate::String::new();
+
+        let _ = core::fmt::Write::write_fmt(&mut res, core::format_args!($($arg)*));
+        res
+    }}
+}
