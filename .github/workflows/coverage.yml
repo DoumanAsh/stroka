@@ -31,9 +31,3 @@ jobs:
 
     - name: Run coverage tests
       run: sh cov.sh && mkdir coverage/ && mv stroka-coverage.html coverage/index.html
-
-    - name: Upload coverage report to gh-pages
-      uses: JamesIves/github-pages-deploy-action@4.1.4
-      with:
-        branch: gh-pages
-        folder: ./coverage/
