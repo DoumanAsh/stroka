@@ -10,7 +10,7 @@
 //! - `String::from_utf8` - due to `minivec` yet to be stable.
 //! - `String::from_utf8_unchecked` - due to `minivec` yet to be stable.
 //! - `String::into_bytes` - due to `minivec` yet to be stable.
-//! - Unstable functions of Vec - due to them being potentially changed.
+//! - Unstable functions of String - due to them being potentially changed.
 //! - `String::from_raw_parts` - cannot be implemented due to internal structure.
 
 #![no_std]
@@ -104,6 +104,10 @@ impl String {
     }
 
     ///Creates new string with provided initial value.
+    ///
+    ///## Note
+    ///
+    ///This API is not part of `String` original API.
     #[inline]
     pub fn new_str(text: &str) -> Self {
         match StrBuf::from_str_checked(text) {
@@ -114,7 +118,13 @@ impl String {
 
     ///Creates new static string.
     ///
-    ///Panics in case of buffer overflow.
+    ///## Note
+    ///
+    ///This API is not part of `String` original API.
+    ///
+    ///## Panics
+    ///
+    ///In case of buffer overflow.
     #[inline]
     pub const fn new_sso(text: &str) -> Self {
         Self::Sso(StrBuf::from_str(text))
@@ -143,7 +153,7 @@ impl String {
     }
 
     #[inline]
-    ///Sets string length, ignoring whathever capacity is available.
+    ///Sets string length, ignoring whether capacity is available.
     ///
     ///User is responsible to guarantee that `0..new_len` is valid string
     pub unsafe fn set_len(&mut self, new_len: usize) {
@@ -153,7 +163,7 @@ impl String {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     ///Returns length of the underlying bytes storage.
     pub fn len(&self) -> usize {
         match self {
@@ -178,9 +188,10 @@ impl String {
         }
     }
 
+    #[inline]
     ///Reserves additional space to store at least `additional` number of elements.
     ///
-    ///The capacity may be increased by more than additional bytes if it chooses, to prevent
+    ///The capacity may be increased by more than `additional` bytes if it chooses, to prevent
     ///frequent reallocations.
     pub fn reserve(&mut self, additional: usize) {
         let capacity = self.capacity();
@@ -243,7 +254,7 @@ impl String {
     ///Returns mutable pointer to the underlying storage.
     ///
     ///Note that write to such pointer is unsafe not only because of
-    ///potential overflow, but the fact that user must write valid utf-8 byte sequence.
+    ///potential overflow/invalid address, but due the fact that user must write valid utf-8 byte sequence.
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
         match self {
             Self::Heap(ref mut heap) => heap.as_mut_ptr(),
@@ -263,7 +274,7 @@ impl String {
     #[inline(always)]
     ///Access content of string as mutable bytes.
     ///
-    ///Note that modifying this slice is `unsafe` hence this function is marked unsafe
+    ///Note that modifying this slice is `unsafe` hence this function is marked unsafe.
     pub unsafe fn as_mut_bytes(&mut self) -> &mut [u8] {
         match self {
             Self::Heap(ref mut heap) => heap.as_mut_slice(),
@@ -312,6 +323,10 @@ impl String {
     pub fn truncate(&mut self, new_len: usize) {
         match self {
             Self::Heap(ref mut heap) => {
+                if new_len > heap.len() {
+                    return;
+                }
+
                 assert!(heap.as_str().is_char_boundary(new_len));
                 //in case of index out of boundary we panic above
                 unsafe {
@@ -319,6 +334,10 @@ impl String {
                 }
             },
             Self::Sso(ref mut sso) => {
+                if new_len > sso.len() {
+                    return;
+                }
+
                 assert!(sso.is_char_boundary(new_len));
                 //in case of index out of boundary we panic above
                 unsafe {
@@ -331,33 +350,29 @@ impl String {
     #[inline(always)]
     ///Returns whether string is empty or not.
     pub fn is_empty(&self) -> bool {
-        match self {
-            Self::Heap(ref heap) => heap.len() == 0,
-            Self::Sso(ref sso) => sso.len() == 0,
-        }
+        self.len() == 0
     }
 
     #[inline]
     ///Removes the last character from the string and returns it, if there is any.
     pub fn pop(&mut self) -> Option<char> {
-        let result = match self {
+        match self {
             Self::Heap(ref mut heap) => {
                 let result = heap.as_str().chars().last()?;
                 unsafe {
                     heap.set_len(heap.len() - result.len_utf8());
                 }
-                result
+
+                Some(result)
             },
             Self::Sso(ref mut sso) => {
                 let result = sso.as_str().chars().last()?;
                 unsafe {
                     sso.set_len(sso.len() as u8 - result.len_utf8() as u8);
                 }
-                result
+                Some(result)
             }
-        };
-
-        Some(result)
+        }
     }
 
     #[inline]
@@ -367,9 +382,9 @@ impl String {
     ///
     ///# Panics
     ///
-    ///If `idx` is larger than or equal to the `String`'s length, or if it does not lie on a [`char`] boundary.
+    ///If `idx` is larger than or equal to the `String`'s length, or if it does not lie on a `char` boundary.
     pub fn remove(&mut self, idx: usize) -> char {
-        let result = match self {
+        match self {
             Self::Heap(ref mut heap) => {
                 let ch = match heap.as_str()[idx..].chars().next() {
                     Some(ch) => ch,
@@ -399,9 +414,7 @@ impl String {
                 }
                 ch
             }
-        };
-
-        result
+        }
     }
 
     ///Retains only the characters specified by the predicate.
@@ -501,11 +514,12 @@ impl String {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     ///Inserts `char` at the given position
+    ///
     ///# Panics
     ///
-    ///Panics if `new_len` does not lie on a `char` boundary.
+    ///Panics if `idx` does not lie on a `char` boundary.
     pub fn insert(&mut self, idx: usize, ch: char) {
         let mut bits = [0; 4];
         self.insert_str(idx, ch.encode_utf8(&mut bits))
@@ -516,7 +530,7 @@ impl String {
     ///
     ///# Panics
     ///
-    ///Panics if `new_len` does not lie on a `char` boundary.
+    ///Panics if `idx` does not lie on a `char` boundary.
     pub fn insert_str(&mut self, idx: usize, string: &str) {
         let string_len = string.len();
         match self {
@@ -553,7 +567,7 @@ impl String {
     #[inline]
     ///Creates a draining iterator that removes the specified range in the `String` and yields the removed `chars`.
     ///
-    ///Note: The element range is removed even if the iterator is not consumed until the end.
+    ///Note: The element range is always removed when iterator is dropped.
     ///
     ///# Panics
     ///

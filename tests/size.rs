@@ -155,6 +155,15 @@ pub fn should_truncate_sso_string() {
 }
 
 #[test]
+pub fn should_not_truncate_above_sso_string_len() {
+    let mut stroka = stroka::String::new_sso("ろり");
+    assert!(!stroka.is_alloc());
+    assert_eq!(stroka.len(), 6);
+    stroka.truncate(7);
+    assert_eq!(stroka.len(), 6);
+}
+
+#[test]
 pub fn should_truncate_heap_string() {
     let mut stroka = stroka::String::new_str("123456789123456789ろり");
     assert!(stroka.is_alloc());
@@ -163,4 +172,13 @@ pub fn should_truncate_heap_string() {
     assert_eq!(stroka.len(), 21);
     stroka.clear();
     assert_eq!(stroka.len(), 0);
+}
+
+#[test]
+pub fn should_not_truncate_above_heap_string_len() {
+    let mut stroka = stroka::String::new_str("123456789123456789ろり");
+    assert!(stroka.is_alloc());
+    assert_eq!(stroka.len(), 24);
+    stroka.truncate(25);
+    assert_eq!(stroka.len(), 24);
 }
