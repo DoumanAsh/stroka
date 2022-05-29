@@ -144,7 +144,7 @@ impl Clone for String {
     fn clone(&self) -> Self {
         match self {
             Self::Heap(ref heap) => Self::Heap(heap.clone()),
-            Self::Sso(ref sso) => Self::Sso(sso.clone()),
+            Self::Sso(ref sso) => Self::Sso(*sso),
         }
     }
 
