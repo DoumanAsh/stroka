@@ -15,7 +15,7 @@
 
 #![no_std]
 #![warn(missing_docs)]
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::style))]
+#![allow(clippy::style)]
 
 extern crate alloc;
 
@@ -178,7 +178,7 @@ impl String {
             let mut heap = HeapStr::with_capacity(capacity);
 
             unsafe {
-                ptr::copy_nonoverlapping(buf.as_ptr() as *const u8, heap.as_mut_ptr(), buf.len());
+                ptr::copy_nonoverlapping(buf.as_ptr() as *const _, heap.as_mut_ptr(), buf.len());
                 heap.set_len(buf.len());
             }
 

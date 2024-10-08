@@ -285,7 +285,7 @@ impl PartialEq<String> for alloc::borrow::Cow<'_, str> {
 impl core::cmp::PartialOrd for String {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        core::cmp::PartialOrd::partial_cmp(self.as_str(), other.as_str())
+        Some(core::cmp::Ord::cmp(self.as_str(), other.as_str()))
     }
 
     #[inline(always)]
