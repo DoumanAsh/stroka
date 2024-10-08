@@ -1,6 +1,6 @@
 [package]
 name = "stroka"
-version = "1.0.0-beta.4"
+version = "1.0.0-beta.5"
 authors = ["Douman <douman@gmx.se>"]
 edition = "2018"
 description = "Small String optimization"
@@ -15,7 +15,7 @@ include = [
 ]
 
 [dependencies.minivec]
-version = "0.4"
+version = "0.5"
 default-features = false
 
 [dependencies.str-buf]
