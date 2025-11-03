@@ -391,11 +391,12 @@ impl String {
                     None => panic!("cannot remove a char from the end of a string")
                 };
 
+                let ptr = heap.as_mut_ptr();
                 let next = idx + ch.len_utf8();
                 let len = heap.len();
 
                 unsafe {
-                    ptr::copy(heap.as_ptr().add(next), heap.as_mut_ptr().add(idx), len - next);
+                    ptr::copy(ptr.add(next), ptr.add(idx), len - next);
                     heap.set_len(len - (next - idx));
                 }
                 ch
@@ -406,10 +407,11 @@ impl String {
                     None => panic!("cannot remove a char from the end of a string")
                 };
 
+                let ptr = sso.as_mut_ptr();
                 let next = idx + ch.len_utf8();
                 let len = sso.len();
                 unsafe {
-                    ptr::copy(sso.as_ptr().add(next), sso.as_mut_ptr().add(idx), len - next);
+                    ptr::copy(ptr.add(next), ptr.add(idx), len - next);
                     sso.set_len(len as u8 - (next as u8 - idx as u8));
                 }
                 ch
@@ -462,10 +464,9 @@ impl String {
                     if !cb(ch) {
                         guard.del_bytes += ch_len;
                     } else if guard.del_bytes > 0 {
+                        let ptr = guard.storage.as_mut_ptr();
                         unsafe {
-                            ptr::copy(guard.storage.as_ptr().add(guard.idx),
-                                      guard.storage.as_mut_ptr().add(guard.idx - guard.del_bytes),
-                                      ch_len);
+                            ptr::copy(ptr.add(guard.idx), ptr.add(guard.idx - guard.del_bytes), ch_len);
                         }
                     }
 
@@ -608,15 +609,17 @@ impl String {
         match self {
             Self::Heap(ref mut heap) => {
                 let (start, end, range_size) = assert_range_len(heap.as_str(), range_start, range_end);
+                let ptr = heap.as_mut_ptr();
                 unsafe {
-                    ptr::copy(heap.as_ptr().add(end), heap.as_mut_ptr().add(start), heap.len() - start - range_size);
+                    ptr::copy(ptr.add(end), ptr.add(start), heap.len() - start - range_size);
                     heap.set_len(heap.len() - range_size);
                 }
             },
             Self::Sso(ref mut sso) => {
                 let (start, end, range_size) = assert_range_len(sso.as_str(), range_start, range_end);
+                let ptr = sso.as_mut_ptr();
                 unsafe {
-                    ptr::copy(sso.as_ptr().add(end), sso.as_mut_ptr().add(start), sso.len() - start - range_size);
+                    ptr::copy(ptr.add(end), ptr.add(start), sso.len() - start - range_size);
                     sso.set_len(sso.len() as u8 - range_size as u8);
                 }
             }
@@ -649,6 +652,7 @@ impl String {
             },
             Self::Sso(ref mut sso) => {
                 let (start, end, range_size) = assert_range_len(sso.as_str(), range_start, range_end);
+                let ptr = sso.as_mut_ptr();
                 let required = sso.len() - range_size + string.len();
                 if StrBuf::capacity() < required {
                     let mut heap = self.assert_heap_from_sso(required);
@@ -663,19 +667,19 @@ impl String {
                         if let Some(diff) = range_size.checked_sub(string.len()) {
                             //range_size > string.len()
                             unsafe {
-                                ptr::copy(sso.as_ptr().add(end), sso.as_mut_ptr().add(start + diff), sso.len() - diff);
+                                ptr::copy(ptr.add(end), ptr.add(start + diff), sso.len() - diff);
                             }
                         } else {
                             let diff = string.len() - range_size;
                             if let Some(len_diff) = sso.len().checked_sub(diff) {
                                 unsafe {
-                                    ptr::copy(sso.as_ptr().add(start + diff), sso.as_mut_ptr().add(end + diff), len_diff);
+                                    ptr::copy(ptr.add(start + diff), ptr.add(end + diff), len_diff);
                                 }
                             }
                         }
 
                         unsafe {
-                            ptr::copy(string.as_ptr(), sso.as_mut_ptr().add(start), string.len());
+                            ptr::copy(string.as_ptr(), ptr.add(start), string.len());
                             sso.set_len(required as _);
                         }
                     }

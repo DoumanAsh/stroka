@@ -57,13 +57,15 @@ impl<'a> Drop for Drain<'a> {
         match this {
             String::Heap(ref mut heap) => {
                 unsafe {
-                    ptr::copy(heap.as_ptr().add(self.end), heap.as_mut_ptr().add(self.start), heap.len() - self.start - range_size);
+                    let ptr = heap.as_mut_ptr();
+                    ptr::copy(ptr.add(self.end), ptr.add(self.start), heap.len() - self.start - range_size);
                     heap.set_len(heap.len() - range_size);
                 }
             },
             String::Sso(ref mut sso) => {
                 unsafe {
-                    ptr::copy(sso.as_ptr().add(self.end), sso.as_mut_ptr().add(self.start), sso.len() - self.start - range_size);
+                    let ptr = sso.as_mut_ptr();
+                    ptr::copy(ptr.add(self.end), ptr.add(self.start), sso.len() - self.start - range_size);
                     sso.set_len(sso.len() as u8 - range_size as u8);
                 }
             },
