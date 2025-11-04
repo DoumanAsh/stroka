@@ -1,13 +1,13 @@
 #!/bin/bash
 
-RUSTFLAGS="-Z instrument-coverage" LLVM_PROFILE_FILE="stroka-%m.profraw" \
+RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="stroka-%m.profraw" \
 cargo test --tests \
   && cargo profdata -- merge -sparse stroka-*.profraw -o stroka.profdata \
   && cargo cov -- report \
     $( \
       for file in \
         $( \
-          RUSTFLAGS="-Z instrument-coverage" \
+          RUSTFLAGS="-C instrument-coverage" \
             cargo test --tests --no-run --message-format=json \
               | jq -r "select(.profile.test == true) | .filenames[]" \
               | grep -v dSYM - \
@@ -24,7 +24,7 @@ cargo test --tests \
     $( \
       for file in \
         $( \
-          RUSTFLAGS="-Z instrument-coverage" \
+          RUSTFLAGS="-C instrument-coverage" \
             cargo test --tests --no-run --message-format=json \
               | jq -r "select(.profile.test == true) | .filenames[]" \
               | grep -v dSYM - \
