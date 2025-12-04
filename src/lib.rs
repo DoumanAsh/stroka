@@ -35,7 +35,7 @@ use core::{ptr, mem};
 
 type HeapStr = minivec::MiniVec<u8>;
 const SSO_MAX_SIZE: usize = mem::size_of::<HeapStr>() * 2 - 2;
-type StrBuf = str_buf::StrBuf<{SSO_MAX_SIZE}>;
+type StrBuf = str_buf::StrBuf<{str_buf::capacity(SSO_MAX_SIZE)}>;
 
 #[inline(always)]
 unsafe fn insert_bytes_into(ptr: *mut u8, len: usize, idx: usize, bytes: &[u8]) {
@@ -159,7 +159,7 @@ impl String {
     pub unsafe fn set_len(&mut self, new_len: usize) {
         match self {
             Self::Heap(ref mut buf) => buf.set_len(new_len ),
-            Self::Sso(ref mut string) => string.set_len(new_len as u8),
+            Self::Sso(ref mut string) => string.set_len(new_len),
         }
     }
 
@@ -341,7 +341,7 @@ impl String {
                 assert!(sso.is_char_boundary(new_len));
                 //in case of index out of boundary we panic above
                 unsafe {
-                    sso.set_len(new_len as u8);
+                    sso.set_len(new_len);
                 }
             },
         }
@@ -368,7 +368,7 @@ impl String {
             Self::Sso(ref mut sso) => {
                 let result = sso.as_str().chars().last()?;
                 unsafe {
-                    sso.set_len(sso.len() as u8 - result.len_utf8() as u8);
+                    sso.set_len(sso.len() - result.len_utf8());
                 }
                 Some(result)
             }
@@ -412,7 +412,7 @@ impl String {
                 let len = sso.len();
                 unsafe {
                     ptr::copy(ptr.add(next), ptr.add(idx), len - next);
-                    sso.set_len(len as u8 - (next as u8 - idx as u8));
+                    sso.set_len(len - (next - idx));
                 }
                 ch
             }
@@ -445,7 +445,7 @@ impl String {
                         let new_len = self.idx - self.del_bytes;
                         debug_assert!(new_len <= self.storage.len());
                         unsafe {
-                            self.storage.set_len(new_len as _);
+                            self.storage.set_len(new_len);
                         }
 
                     }
@@ -558,7 +558,7 @@ impl String {
                 } else {
                     unsafe {
                         insert_bytes_into(sso.as_mut_ptr(), len, idx, string.as_bytes());
-                        sso.set_len(len as u8 + string_len as u8);
+                        sso.set_len(len + string_len);
                     }
                 }
             }
@@ -620,7 +620,7 @@ impl String {
                 let ptr = sso.as_mut_ptr();
                 unsafe {
                     ptr::copy(ptr.add(end), ptr.add(start), sso.len() - start - range_size);
-                    sso.set_len(sso.len() as u8 - range_size as u8);
+                    sso.set_len(sso.len() - range_size);
                 }
             }
         }
@@ -680,7 +680,7 @@ impl String {
 
                         unsafe {
                             ptr::copy(string.as_ptr(), ptr.add(start), string.len());
-                            sso.set_len(required as _);
+                            sso.set_len(required);
                         }
                     }
                 }

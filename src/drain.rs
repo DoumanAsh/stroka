@@ -66,7 +66,7 @@ impl<'a> Drop for Drain<'a> {
                 unsafe {
                     let ptr = sso.as_mut_ptr();
                     ptr::copy(ptr.add(self.end), ptr.add(self.start), sso.len() - self.start - range_size);
-                    sso.set_len(sso.len() as u8 - range_size as u8);
+                    sso.set_len(sso.len() - range_size);
                 }
             },
         }
